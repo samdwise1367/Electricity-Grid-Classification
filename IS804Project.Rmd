@@ -1,0 +1,1469 @@
+---
+title: "Prediction of Electricity Stability Using Classification Machine Learning Methods"
+author: "Samson Oni (www.samdwise.com)"
+output:
+  html_document:
+    toc: yes
+  pdf_document:
+    number_sections: yes
+    toc: yes
+  word_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\pagebreak
+
+# Introduction
+
+This document reports the analysis of local stability electric grid dataset, hosted by UCI Machine learning repository.  The data set contains readings from an electrical system having 4 nodes producing electricity and using the data to determine the system stability. 
+
+*Project's Goal**: Goal is to model the data, so as to accurately predict the stability of electric grid. Also, infer the relationship between predictors and the response.The URL of the dataset is <https://archive.ics.uci.edu/ml/datasets/Electrical+Grid+Stability+Simulated+Data+>. The scope of this project is to apply concepts learnt in class on our desire data set. We use R language through out the project.  
+
+_Size of Observations(n)_ = 10000
+
+_Number of predictors(p)_ = 11
+
+**What constitutes an observation**: Each observation represents valuation record of a system using multiple nodes. There are 11 predictor variables and 1 outcome variable for each observation.The predictor variables usage are independent on each other. 
+
+**Response Variables**: The Response variable also known as the Output variable is stabf. It tells us if the system is stable or not.
+
+**Predictor variables**: tau1,tau2,tau3,tau4 are electricity produced from node1,node2,node3 and node 4 respectively. Obviously these will contribute in determining of the system is stable or not. p2,p3,p4 are the power consumed on node2, node3 and node4 respectively. For some reasons energy consumed on node1 is not included in determining whether the system is stable of not. So we won't worry about p1. That being said, p2,p3,p4 have impact on the response. g1,g2,g3,g4 are the price value of electricity on node1-node 4 at each observation. These variables would also add to factor to determine if the system is stable or not. The usage of the variables were independentof each other. Therefore each can be treated on its own.
+
+
+We read the data from a csv file and attach to the project. The R function attach() is use to attach data to the project for ease of accessibility.  
+
+```{r}
+data = read.csv("electricity19.csv")
+attach(data)
+```
+
+Below procedure display the data's features and observations for better understanding. 
+
+```{r}
+names(data) #displays feature names
+head(data)  #displays 10 observations.
+```
+
+```{r}
+dim(data)
+```
+
+The dim() function shows the data has 10000 observations and 12 columns.
+
+The summary() function in R shows a numerical summary of each variable in data set. We display the summary statistics of our data set.
+
+```{r}
+summary(data)
+```
+
+Next, we examine the correlation state of our data. We display correlation with cor() R function. 
+
+```{r}
+cor(data[,-12])
+```
+
+For all variables, there isn't substantial correlation between the predictors. Also, we use graphical plot to show the correlation state of the data set.
+
+**Graphical Summaries**
+
+First, we use pair() function to create a scatterplot matrix for all the variables. We see a scatterplot for every pair variables in our data set.
+
+```{r}
+pairs(data,col=data$stabf)
+```
+
+From the pair plot above, the red color indicate the distribution of observation with unstable response while black indicate distribution of observations with stable response.
+
+We then go ahead to use the ggpairs function in ggally package in R, to see the correlation among predictors also.
+
+```{r warning=FALSE}
+library(GGally)
+ggpairs(data = data[1:11],
+        title = "Electricity data Correlation Plot",
+        upper = list(continuous = wrap("cor", size = 2)), 
+        lower = list(continuous = "smooth")
+)
+```
+
+Below,We display the density and frequency plot using histogram on the data.
+
+```{r warning=FALSE}
+library(ggplot2) # Data visualization
+library(gridExtra)
+library(grid)
+# Density & Frequency analysis with the Histogram,
+
+# Tau1 
+tau1l <- ggplot(data=data, aes(x=tau1))+
+  geom_histogram(binwidth=0.2, color="black", aes(fill=stabf)) + 
+  xlab("Tau1") +  
+  ylab("Frequency") + 
+  theme(legend.position="none")+
+  ggtitle("Histogram of Sepal Length")+
+  geom_vline(data=data, aes(xintercept = mean(tau1)),linetype="dashed",color="grey")
+
+# Tau2
+tau2l <- ggplot(data=data, aes(x=tau2))+
+  geom_histogram(binwidth=0.2, color="black", aes(fill=stabf)) + 
+  xlab("Tau2") +  
+  ylab("Frequency") + 
+  theme(legend.position="none")+
+  ggtitle("Histogram of Sepal Length")+
+  geom_vline(data=data, aes(xintercept = mean(tau2)),linetype="dashed",color="grey")
+
+# Tau3
+tau3l <- ggplot(data=data, aes(x=tau3))+
+  geom_histogram(binwidth=0.2, color="black", aes(fill=stabf)) + 
+  xlab("Tau3") +  
+  ylab("Frequency") + 
+  theme(legend.position="none")+
+  ggtitle("Histogram of Sepal Length")+
+  geom_vline(data=data, aes(xintercept = mean(tau3)),linetype="dashed",color="grey")
+
+# Tau4 
+tau4l <- ggplot(data=data, aes(x=tau2))+
+  geom_histogram(binwidth=0.2, color="black", aes(fill=stabf)) + 
+  xlab("Tau4") +  
+  ylab("Frequency") + 
+  theme(legend.position="none")+
+  ggtitle("Histogram of Sepal Length")+
+  geom_vline(data=data, aes(xintercept = mean(tau4)),linetype="dashed",color="grey")
+
+#P2
+p2l <- ggplot(data=data, aes(x=p2))+
+  geom_histogram(binwidth=0.2, color="black", aes(fill=stabf)) + 
+  xlab("p2") +  
+  ylab("Frequency") + 
+  theme(legend.position="none")+
+  ggtitle("Histogram of Sepal Length")+
+  geom_vline(data=data, aes(xintercept = mean(p2)),linetype="dashed",color="grey")
+
+#P3
+p3l <- ggplot(data=data, aes(x=p3))+
+  geom_histogram(binwidth=0.2, color="black", aes(fill=stabf)) + 
+  xlab("p3") +  
+  ylab("Frequency") + 
+  theme(legend.position="none")+
+  ggtitle("Histogram of Sepal Length")+
+  geom_vline(data=data, aes(xintercept = mean(p3)),linetype="dashed",color="grey")
+
+#P4
+p4l <- ggplot(data=data, aes(x=p4))+
+  geom_histogram(binwidth=0.2, color="black", aes(fill=stabf)) + 
+  xlab("p4") +  
+  ylab("Frequency") + 
+  theme(legend.position="none")+
+  ggtitle("Histogram of Sepal Length")+
+  geom_vline(data=data, aes(xintercept = mean(p4)),linetype="dashed",color="grey")
+
+#g1
+g1l <- ggplot(data=data, aes(x=g1))+
+  geom_histogram(binwidth=0.2, color="black", aes(fill=stabf)) + 
+  xlab("g1") +  
+  ylab("Frequency") + 
+  theme(legend.position="none")+
+  ggtitle("Histogram of Sepal Length")+
+  geom_vline(data=data, aes(xintercept = mean(g1)),linetype="dashed",color="grey")
+
+#g2
+g2l <- ggplot(data=data, aes(x=g2))+
+  geom_histogram(binwidth=0.2, color="black", aes(fill=stabf)) + 
+  xlab("g2") +  
+  ylab("Frequency") + 
+  theme(legend.position="none")+
+  ggtitle("Histogram of Sepal Length")+
+  geom_vline(data=data, aes(xintercept = mean(g2)),linetype="dashed",color="grey")
+
+#g3
+g3l <- ggplot(data=data, aes(x=g3))+
+  geom_histogram(binwidth=0.2, color="black", aes(fill=stabf)) + 
+  xlab("g3") +  
+  ylab("Frequency") + 
+  theme(legend.position="none")+
+  ggtitle("Histogram of Sepal Length")+
+  geom_vline(data=data, aes(xintercept = mean(g3)),linetype="dashed",color="grey")
+
+#g4
+g4l <- ggplot(data=data, aes(x=g4))+
+  geom_histogram(binwidth=0.2, color="black", aes(fill=stabf)) + 
+  xlab("g4") +  
+  ylab("Frequency") + 
+  theme(legend.position="right")+
+  ggtitle("Histogram of Sepal Length")+
+  geom_vline(data=data, aes(xintercept = mean(g4)),linetype="dashed",color="grey")
+
+# Plot all visualizations
+grid.arrange(tau1l + ggtitle(""),
+             tau2l + ggtitle(""),
+             tau3l + ggtitle(""),
+             tau4l  + ggtitle(""),
+             p2l + ggtitle(""),
+             p3l + ggtitle(""),
+             p4l + ggtitle(""),
+             g1l + ggtitle(""),
+             g2l + ggtitle(""),
+             g3l + ggtitle(""),
+             g4l + ggtitle(""),
+             nrow = 3,
+             top = textGrob("Electric Data Frequency Histogram", 
+                            gp=gpar(fontsize=15))
+)
+
+```
+
+From the above plots, We can see the density distribution of each attribute broken down by class value. Like the scatterplot matrix, the density plot by class can show the separation of classes. It can also help to us understand the overlap in class values for an attribute.
+
+```{r warning=FALSE}
+# Tau1 
+tau1l <- ggplot(data=data, aes(x=tau1,colour=stabf), fill=stabf)+
+  geom_density(alpha=.3) +
+  geom_vline(aes(xintercept = mean(tau1), colour=stabf),linetype="dashed",color="grey",size=1)+
+  xlab("Tau1") +  
+  ylab("Density") + 
+  theme(legend.position="none")
+
+# Tau2 
+tau2l <- ggplot(data=data, aes(x=tau2,colour=stabf), fill=stabf)+
+  geom_density(alpha=.3) +
+  geom_vline(aes(xintercept = mean(tau2), colour=stabf),linetype="dashed",color="grey",size=1)+
+  xlab("Tau2") +  
+  ylab("Density") + 
+  theme(legend.position="none")
+
+# Tau3 
+tau3l <- ggplot(data=data, aes(x=tau3,colour=stabf), fill=stabf)+
+  geom_density(alpha=.3) +
+  geom_vline(aes(xintercept = mean(tau2), colour=stabf),linetype="dashed",color="grey",size=1)+
+  xlab("Tau3") +  
+  ylab("Density") + 
+  theme(legend.position="none")
+
+# Tau4 
+tau4l <- ggplot(data=data, aes(x=tau4,colour=stabf), fill=stabf)+
+  geom_density(alpha=.3) +
+  geom_vline(aes(xintercept = mean(tau4), colour=stabf),linetype="dashed",color="grey",size=1)+
+  xlab("Tau4") +  
+  ylab("Density") + 
+  theme(legend.position="none")
+
+#P2  
+p2l <- ggplot(data=data, aes(x=p2,colour=stabf), fill=stabf)+
+  geom_density(alpha=.3) +
+  geom_vline(aes(xintercept = mean(tau2), colour=stabf),linetype="dashed",color="grey",size=1)+
+  xlab("p2") +  
+  ylab("Density") + 
+  theme(legend.position="none")
+
+#P3  
+p3l <- ggplot(data=data, aes(x=p3,colour=stabf), fill=stabf)+
+  geom_density(alpha=.3) +
+  geom_vline(aes(xintercept = mean(p3), colour=stabf),linetype="dashed",color="grey",size=1)+
+  xlab("p3") +  
+  ylab("Density") + 
+  theme(legend.position="none")
+
+#P4  
+p4l <- ggplot(data=data, aes(x=p4,colour=stabf), fill=stabf)+
+  geom_density(alpha=.3) +
+  geom_vline(aes(xintercept = mean(p4), colour=stabf),linetype="dashed",color="grey",size=1)+
+  xlab("p4") +  
+  ylab("Density") + 
+  theme(legend.position="none")
+
+#g1  
+g1l <- ggplot(data=data, aes(x=g1,colour=stabf), fill=stabf)+
+  geom_density(alpha=.3) +
+  geom_vline(aes(xintercept = mean(g1), colour=stabf),linetype="dashed",color="grey",size=1)+
+  xlab("g1") +  
+  ylab("Density") + 
+  theme(legend.position="none")
+
+#g2  
+g2l <- ggplot(data=data, aes(x=g2,colour=stabf), fill=stabf)+
+  geom_density(alpha=.3) +
+  geom_vline(aes(xintercept = mean(g2), colour=stabf),linetype="dashed",color="grey",size=1)+
+  xlab("g2") +  
+  ylab("Density") + 
+  theme(legend.position="none")
+
+#g3  
+g3l <- ggplot(data=data, aes(x=g3,colour=stabf), fill=stabf)+
+  geom_density(alpha=.3) +
+  geom_vline(aes(xintercept = mean(g3), colour=stabf),linetype="dashed",color="grey",size=1)+
+  xlab("g3") +  
+  ylab("Density") + 
+  theme(legend.position="none")
+
+#g4  
+g4l <- ggplot(data=data, aes(x=g4,colour=stabf), fill=stabf)+
+  geom_density(alpha=.3) +
+  geom_vline(aes(xintercept = mean(g3), colour=stabf),linetype="dashed",color="grey",size=1)+
+  xlab("g4") +  
+  ylab("Density") + 
+  theme(legend.position="right")
+
+# Plot all density visualizations
+grid.arrange(tau1l + ggtitle(""),
+             tau2l + ggtitle(""),
+             tau3l + ggtitle(""),
+             tau4l + ggtitle(""),
+             p2l + ggtitle(""),
+             p3l + ggtitle(""),
+             p4l + ggtitle(""),
+             g1l + ggtitle(""),
+             g2l + ggtitle(""),
+             g3l + ggtitle(""),
+             g4l + ggtitle(""),
+             nrow = 3,
+             top = textGrob("Electricity data Density Plot", 
+                            gp=gpar(fontsize=15))
+)  
+
+
+```
+
+Above plots shows the desity plot of the variables in our data set.
+
+We therefore plot all the variables in a single visualization that contain all the boxplots.
+
+```{r warning=FALSE}
+tau1SL <- ggplot(data=data, aes(stabf,tau1,fill=stabf)) + 
+        geom_boxplot()+
+        scale_y_continuous("Tau1", breaks= seq(0,300, by=.5))+
+        theme(legend.position="none")
+
+tau2SL <- ggplot(data=data, aes(stabf,tau2,fill=stabf)) + 
+        geom_boxplot()+
+        scale_y_continuous("Tau2", breaks= seq(0,30, by=.5))+
+        theme(legend.position="none")
+
+tau3SL <- ggplot(data=data, aes(stabf,tau3,fill=stabf)) + 
+        geom_boxplot()+
+        scale_y_continuous("Tau3", breaks= seq(0,30, by=.5))+
+        theme(legend.position="none")
+tau4SL <- ggplot(data=data, aes(stabf,tau4,fill=stabf)) + 
+        geom_boxplot()+
+        scale_y_continuous("Tau4", breaks= seq(0,30, by=.5))+
+        theme(legend.position="none")
+p2SL <- ggplot(data=data, aes(stabf,p2,fill=stabf)) + 
+        geom_boxplot()+
+        scale_y_continuous("P2", breaks= seq(0,30, by=.5))+
+        theme(legend.position="none")
+p3SL <- ggplot(data=data, aes(stabf,p3,fill=stabf)) + 
+        geom_boxplot()+
+        scale_y_continuous("P3", breaks= seq(0,30, by=.5))+
+        theme(legend.position="none")
+p4SL <- ggplot(data=data, aes(stabf,p4,fill=stabf)) + 
+        geom_boxplot()+
+        scale_y_continuous("P4", breaks= seq(0,30, by=.5))+
+        theme(legend.position="none")
+g1SL <- ggplot(data=data, aes(stabf,g1,fill=stabf)) + 
+        geom_boxplot()+
+        scale_y_continuous("G1", breaks= seq(0,30, by=.5))+
+        theme(legend.position="none")
+g2SL <- ggplot(data=data, aes(stabf,g2,fill=stabf)) + 
+        geom_boxplot()+
+        scale_y_continuous("G2", breaks= seq(0,30, by=.5))+
+        theme(legend.position="none")
+g3SL <- ggplot(data=data, aes(stabf,tau3,fill=stabf)) + 
+        geom_boxplot()+
+        scale_y_continuous("G3", breaks= seq(0,30, by=.5))+
+        theme(legend.position="none")
+
+g4SL <- ggplot(data=data, aes(stabf,g4,fill=stabf)) + 
+        geom_boxplot()+
+        scale_y_continuous("G4", breaks= seq(0,30, by=.5))+
+        theme(legend.position="right")
+
+
+# Plot all density visualizations
+grid.arrange(tau1SL + ggtitle(""),
+             tau2SL + ggtitle(""),
+             tau3SL + ggtitle(""),
+             tau4SL + ggtitle(""),
+             p2SL + ggtitle(""),
+             p3SL + ggtitle(""),
+             p4SL + ggtitle(""),
+             g1SL + ggtitle(""),
+             g2SL + ggtitle(""),
+             g3SL + ggtitle(""),
+             g4SL + ggtitle(""),
+             nrow = 3,
+             top = textGrob("Electricity data Density Plot", 
+                            gp=gpar(fontsize=11))
+)  
+
+```
+
+Above boxplots indicate that there is not any case of outliers within our data set.
+
+In this section, we explored our data set. We used several R functions to understand our data set. We also used several graphical functions to look through the data. In the next section, we will carry out classification machine learning methods on our data set. 
+
+# Classification
+
+From the introduction, we saw that the response variable of our data set is qualitative. In this session, We will use several  classification methods in predicting qualitative response. 
+
+There are several methods  for classification. But in this project we focus on four(4) methods namely: Logistics regression, Linear discriminate analysis, Quadratic discriminate analysis and KNN. 
+
+##Logistic Regression
+###Whole dataset for train and test
+
+We fit a logistic regression model to predict the stablity of the electricity using the predictive variables of the data. We use the generalized linear models glm() function in R. We begin by using the whole data set for both traininbg and testing of model. 
+
+```{r}
+glm.fits=glm(stabf~tau1+tau2+tau3+tau4+p2+p3+p4+g1+g2+g3+g4, family = binomial, data = data)
+summary(glm.fits) #display summary of the fitted model
+```
+
+From the above procedure, we fitted the model using glm() function and used the summary() function in R to display summary of the fitted model. We can see that the predictors with smallest p-value here are tau1,tau2,tau3,tau4,g1,g2,g3,g4. It shows these predictors have significance on the response variable stabf. 
+
+It is important to note that variable p4 has negative coefficient, this suggests that p4 has a negative impact on the response variable. 
+
+Below we use coef() function to display the coefficients for the fitted model.
+
+```{r}
+coef(glm.fits)
+```
+
+Also, we use the summary() function to display the p-values for the coefficients.
+
+```{r}
+summary(glm.fits)$coef
+```
+
+
+Next, we use the predict() function to prepedict the probability of the electricity stability, given the values of the predictors.
+
+```{r}
+glm.probs=predict(glm.fits,type = "response")
+glm.probs[1:10]
+```
+
+The glm.probs above displays the probability of the electricity stability.
+
+```{r}
+contrasts(data$stabf)
+```
+
+From above, we used the constrast() function to assign dummy variable 1 to unstable  and 0 to stable. 
+
+```{r}
+glm.pred=rep("stable",10000)
+glm.pred[glm.probs>.5]="unstable"
+```
+
+The two commands above creates a vector of class predictions based whether the predicted probability of the Electricity grid non-stability is greater than or less than 0.5.
+
+We use the table() function in R to create a confuse matrix to determine how many observations are correctly or incorrectly classified.
+
+```{r}
+table(glm.pred,data$stabf)
+```
+
+From above, the table function displays the confession matrix. The diagonal elements of the confusion matrix shows the correct predictions, while off-diagonals shows incorrect predictions. 2556 + 5609 shows the number of correct predictions, while 1064+771 shows the number of incorrect predictions.
+
+We use the the mean() function to use to calculate the fraction of prediction correctness.
+
+```{r}
+mean(glm.pred==data$stabf)
+```
+
+The performance accuracy of our model using whole data for training and testing is 81.7% with logistic regression. 
+
+From above, we used the same set of 10000 observations as both training and testing our model. 
+
+The **training error rate** is 100-81.7 = 18.5%
+
+###Train dataset and Held out dataset
+
+Using the whole datset for both training the model and testing the model could be misleading. The train error rate tends to underestimate the test error rate.To solve this issue, we are going to fit the model using part of the data, and then examine how well it predits using the held out data. This method yields a more realistic error rate. 
+
+Next,We randomly divid the dataset into train data and test data.
+
+```{r}
+set.seed(1)
+smp_siz = floor(0.75*nrow(data)) 
+train_ind = sample(seq_len(nrow(data)),size = smp_siz)  
+train =data[train_ind,] 
+test=data[-train_ind,]
+```
+
+We used the ratio of 75:25 division for the dataset to train and test respectively. 
+
+Next, we go through the same process for fitting the model and prediction discussed before. But this time we use the train data set and test set.
+
+```{r}
+glm.fits2=glm(stabf~tau1+tau2+tau3+tau4+p2+p3+p4+g1+g2+g3+g4, family = binomial, data = train)
+summary(glm.fits2)
+```
+
+Using the train data didnt change the predictors that are significant.The predictors with smallest p-value are still tau1,tau2,tau3,tau4,g1,g2,g3,g4. Also, this Shows these predictors have significance on the response variable stabf. 
+p4 still has negative coefficient which suggests a negative impact on the response variable. 
+
+We now use the predict() function to predict the probability of the electricity stability on new model using the test data, given the values of the predictors.
+
+```{r}
+glm.probs2=predict(glm.fits2,test,type = "response")
+glm.probs2[1:10]
+```
+
+```{r}
+contrasts(train$stabf)
+dim(test)
+```
+
+The dim() funtion displayed the dimension of the test data. The number of observation in the test data is 2500.
+
+```{r}
+glm.pred2=rep("stable",2500)
+glm.pred2[glm.probs2>.5]="unstable"
+table(glm.pred2,test$stabf)
+glm_correctness = mean(glm.pred2==test$stabf)
+glm_correctness
+```
+
+As usual we used mean() function to calculate the fraction of prediction correctness. 
+We noticed a slight improvement in the accuracy of our model when we used train data and test data. The accuracy is 81.76%. Though the improvement isn't much but it shows the need to have different set of data for training and testing of model. 
+
+##Linear Discriminant Analysis
+
+We are going to perform a linear discriminant analysis on our data set. For this model, we use the train and test data set we already have. We fit an LDA model using lda() function on our train data.
+
+```{r}
+require(MASS)
+lda.fit=lda(stabf~tau1+tau2+tau3+tau4+p2+p3+p4+g1+g2+g3+g4,data=train)
+lda.fit
+```
+
+The output of the LDA indicates $\pi1$ = 0.36 and $\pi2$ = 0.64. This indicates that 36% of the training observations correspond to the Electricity grid being stable. While 64% indicates unstability of the Electricity grid.
+
+We also see the group means. The Group means shows averge of each predictor within each class and its LDA estimates.
+
+The Coefficients of linear discriminants provides the linear combination of all the predictors that are used to form the LDA decision rule.
+
+We use plot() function to produce a plot of the linear discriminants.
+
+```{r}
+plot(lda.fit)
+``` 
+
+Next, we use the predict() function on our fitted lda model with the test data.
+
+```{r}
+lda.pred=predict(lda.fit, test)
+names(lda.pred)
+```
+
+From the result above, the predict() function returned a list with three elements. Namely the class, posterior and x which contains the linear discriminants.
+
+Next, we use the class from fitted model on the table() function produce a confuse matrix. This will determine how many observations that is correctly or incorrectly classified.
+
+```{r}
+lda.class=lda.pred$class
+table(lda.class,test$stabf)
+lda_correctness=mean(lda.class==test$stabf)
+lda_correctness
+```
+
+From the above procedure, with using lda on our data, we got an accuracy of 81.76% which is similar to what we got with logistics regression.
+
+```{r}
+sum(lda.pred$posterior[,1]>=.5)
+sum(lda.pred$posterior[,1]<.5)
+```
+With the above code we recreated the predictions contained in lda.pred$class using 50% threshold to the posterior probabilities.
+
+##Quadratic Discriminant Analysis
+
+We  are going to carry out a quadratic discriminat analysis on our data set. We use qda() function in R, which is part of the MASS library.
+
+```{r}
+qda.fit=qda(stabf~tau1+tau2+tau3+tau4+p2+p3+p4+g1+g2+g3+g4,data=train)
+qda.fit
+``` 
+
+The output contains group means but doesnt contain coefficient of the linear discriminants. This is because i is not a linear but quadratic model. 
+
+Next, We use the predict() function which works in similar fashion as LDA.
+
+```{r}
+qda.class=predict(qda.fit,test)$class
+table(qda.class,test$stabf)
+qda_correctness=mean(qda.class==test$stabf)
+qda_correctness
+``` 
+
+The accuracy of QDA is 88.8% which is greater than LDA and logistics regression performance accuracy. This suggest that QDA captures the true relationship more accurately than LDA and logistics regression.
+
+##K-Nearest Neighbors
+
+Next, We carry out K-nearest neigbours analysis on our data set. We use the knn() functio in R. With knn it works differently from other model-fitting functions. Knn take a single command instead of the two-step train test approach.
+
+As other model, we divid the data into train and test and use normalization formular to conver everything into values between 0 and 1.
+
+```{r}
+library(class)
+set.seed(1)
+
+##normalization function is created
+nor <-function(x) { (x -min(x))/(max(x)-min(x))   }
+
+##Run nomalization on first 11 coulumns of dataset because they are the predictors
+data_norm <- as.data.frame(lapply(data[,c(1,2,3,4,5,6,7,8,9,10,11)], nor))
+
+train2 <- sample(1:nrow(data), 0.75 * nrow(data)) 
+
+##extract training set
+data_train <- data_norm[train2,] 
+
+##extract testing set
+data_test <- data_norm[-train2,] 
+
+##extract 5th column of train dataset because it will be used as 'cl' argument in knn function.
+data_target_category <- data[train2,12]
+##extract 5th column if test dataset to measure the accuracy
+data_test_category <- data[-train2,12]
+
+``` 
+
+From above, we used the normalization formular on the train and test data to convert to value between 0 and 1. 
+
+Next, we run the knn() function which takes both the normalized train data, the normalized test data, reponse variable and the value of K.
+
+```{r}
+set.seed(1)
+##run knn function
+knn.pred <- knn(data_train,data_test,cl=data_target_category,k=1)
+##create confusion matrix
+table(knn.pred,data_test_category)
+
+knn_1 = mean(knn.pred==data_test_category)
+knn_1
+```
+
+From the above procedure, we set k=1 and got a prediction accuracy of 81.88%. 
+
+We believe increasing the value of k will yield better prediction accuracy. Next, We set k=5 to see what the performance will be.
+
+```{r warning=FALSE}
+set.seed(1)
+##run knn function
+knn.pred <- knn(data_train,data_test,cl=data_target_category,k=5)
+##create confusion matrix
+table(knn.pred,data_test_category)
+knn_5=mean(knn.pred==data_test_category)
+knn_5
+```
+
+Setting K=5 increased the performance accuracy of knn on our data set. k=5 with knn gave 86.32% accuracy while k=1 gave us 81.88% accuracy. 
+
+##Comparing Logistic regression, LDA, QDA and KNN result
+
+To compare this section, we compare the performance from all the models we used so far. Below shows the comparison of the performance of the model used in this section. 
+
+```{r}
+data.frame(Logistic = glm_correctness, LDA = lda_correctness, QDA = qda_correctness, Knn1 = knn_1, Knn5 = knn_5)
+```
+
+##ROC and AUC
+
+We plot the Receiver Operating Characteristic (ROC) curve for our default predicting logistic regression model below.
+
+```{r}
+library(ROCR)
+
+# score the same training data set on which the model was fit
+prob = predict.glm(glm.fits, type='response', newdata =  data)
+pred = prediction(prob, data$stabf)
+
+# AUC
+auc = performance(pred,"auc")@y.values[[1]][1]
+
+# plot the ROC curve
+perf <- performance(pred,"tpr","fpr")
+plot(perf, col="navyblue", cex.main=1,
+     main= paste("Logistic Regression ROC Curve: AUC =", round(auc,3)))
+abline(a=0, b = 1, col='darkorange1')
+```
+
+The Area under the ROC curve (AUC) is a widely-used measure of accuracy for classification models. The AUC = 0.891 is unrealistically high. This is because the predictions where made for the same dataset on which the model was estimated.
+
+Next, we plot the ROC curve with our model built with training and test data. 
+
+```{r}
+library(ROCR)
+
+# score the same training data set on which the model was fit
+prob2 = predict.glm(glm.fits2, type='response', newdata =  test)
+pred2 = prediction(prob2, test$stabf)
+
+# AUC
+auc2 = performance(pred2,"auc")@y.values[[1]][1]
+
+# plot the ROC curve
+perf2 <- performance(pred2,"tpr","fpr")
+plot(perf2, col="navyblue", cex.main=1,
+     main= paste("Logistic Regression ROC Curve: AUC =", round(auc2,3)))
+abline(a=0, b = 1, col='darkorange1')
+```
+
+Using different data for estimating the model and testing the model, the AUC = 0.889. This is more realistic. 
+
+#Resampling Methods
+
+Resmapling methods do with repeatedly drawing samples from a training set and refitting the model of interest on each sample in order to obtain additional information about the fitted model.
+
+We carryout cross-validation and the bootstrap methods. We use logistics regression for illustartion in this section.
+
+##Cross-Validation
+
+The following sections describes the different cross-validation techniques.
+
+###The Validation set Approach
+
+We carry out the Validation set approach on the our dataset.
+We use the set.seed() to random generate sample. We will randomly divide the observations into 5000 train and 5000 validation set.
+
+```{r}
+set.seed(3)
+smp_siz = floor(0.5*nrow(data)) 
+train_ind = sample(seq_len(nrow(data)),size = smp_siz)  
+trainVali =data[train_ind,] 
+validationSet=data[-train_ind,]
+train_model=glm(stabf~tau1+tau2+tau3+tau4+p2+p3+p4+g1+g2+g3+g4, family = binomial,data = trainVali)
+```
+
+Above, we randomly divided the data set into 5000 observations for train set and 5000 for test set. We trained our model using logistic regression on the train set.
+
+We run the predict() function using the test model and observe the validation set error rate
+
+```{r}
+glm.probs=predict(train_model,validationSet,type = "response")
+cont = contrasts(train$stabf)
+glm.pred=rep("stable",5000)
+glm.pred[glm.probs>.5]="unstable"
+tlb = table(glm.pred,validationSet$stabf)
+mean(glm.pred!=validationSet$stabf)
+```
+
+The Validation set error rate is 17.98%.
+
+Then We use the poly() function to estimate the validation error rate for the quadratic and cubic classification.
+
+```{r}
+train_model2=glm(stabf~poly((tau1+tau2+tau3+tau4+p2+p3+p4+g1+g2+g3+g4),2), family = binomial,data = train)
+glm.probs2=predict(train_model2,validationSet,type = "response")
+cont2 = contrasts(train$stabf)
+glm.pred2=rep("stable",5000)
+glm.pred2[glm.probs2>.5]="unstable"
+tlb2 = table(glm.pred2,validationSet$stabf)
+mean(glm.pred2!=validationSet$stabf)
+``` 
+
+Validation set error rate for quadradic classification gave 25.2% on our data. 
+
+```{r}
+train_model3=glm(stabf~poly((tau1+tau2+tau3+tau4+p2+p3+p4+g1+g2+g3+g4),3), family = binomial,data = train)
+glm.probs3=predict(train_model3,validationSet,type = "response")
+cont3 = contrasts(train$stabf)
+glm.pred3=rep("stable",5000)
+glm.pred3[glm.probs3>.5]="unstable"
+tlb3 = table(glm.pred3,validationSet$stabf)
+mean(glm.pred3!=validationSet$stabf)
+``` 
+
+Validation set error rate for cubic classification gave 25.28% on our data.
+
+Using validation set approach, we obtained the Validation set error rates for the model with linear, quadractic and cubic terms as 17.98, 25.2 and 25.28 respectively.
+
+
+### Leave-One-Out Cross-Validation (LOOCV)
+
+We use the cv.glm() function in boot library in R to carry out Leave-One-Out Cross-Validation. We run the LOOCV for increasingly complex polynomial fits.
+
+```{r warning=FALSE}
+library(boot)
+# Cost function for a binary classifier suggested by boot package
+cost <- function(r, pi = 0) mean(abs(r-pi) > 0.5)
+cv.error=rep(0,3)
+for(i in 1:3){
+  model=glm(stabf~poly((tau1+tau2+tau3+tau4+p2+p3+p4+g1+g2+g3+g4),i), family = binomial, data = data)
+  cv.error[i]=cv.glm(data,model,cost=cost)$delta[1]
+}
+
+cv.error
+
+# Histogram of the Test Error
+hist(cv.error,xlab='Test Error',ylab='Freq',main='Test Error LOOCV',
+     col='cyan',border='blue',density=30)
+```
+
+From above procedure, we used loop to iteratively fit polynomial regressions for polynomial of order i = 1 to i=3. We Computed the Leave-One-Out cross-validation. Using the Leave-One-Out Cross-Validation approach, we obtained the error rates for the model with linear, quadractic and cubic terms as 0.2532, 0.2543 and 0.2539 respectively.
+
+### K-fOLD Cross-Validation
+
+For K-Fold Cross-Validation, we use cv.glm() function to implement k-fold CV. We set K = 5 first and also use k=10.
+
+For both procedure, we get CV errors corresponding to polynomial fits for orders 1 to 5. 
+
+```{r warning=FALSE}
+set.seed(17)
+cv.error.5=rep(0,5)
+for(i in 1:5){
+  model=glm(stabf~poly((tau1+tau2+tau3+tau4+p2+p3+p4+g1+g2+g3+g4),i), family = binomial, data = data)
+  cv.error.5[i]=cv.glm(data,model,K=5,cost=cost)$delta[1]
+}
+
+cv.error.5
+
+# Histogram of the Test Error
+hist(cv.error.5,xlab='Test Error',ylab='Freq',main='Test Error LOOCV',
+     col='cyan',border='blue',density=30)
+
+```
+
+The computation of K-fold is shorter than that of LOOCV. The CV error for orders 1 to 5 was displayed and shown with the above historgram. From above procedure, we used loop to iteratively fit polynomial regressions for polynomial of order i = 1 to i=5. We Computed the K-Fold cross-validation with k=5. We obtained the error rates for the model for polynomials from i=1 to i=5 as 0.2541, 0.2534, 0.2532, 0.2531 and 0.2538 respectively.
+
+Below we use K= 10 and still get the CV errors corresponding to polynomial fits for orders 1 to 5. 
+
+```{r warning=FALSE}
+set.seed(17)
+cv.error.10=rep(0,5)
+for(i in 1:5){
+  model=glm(stabf~poly((tau1+tau2+tau3+tau4+p2+p3+p4+g1+g2+g3+g4),i), family = binomial, data = data)
+  cv.error.10[i]=cv.glm(data,model,K=10,cost=cost)$delta[1]
+}
+
+cv.error.10
+
+# Histogram of the Test Error
+hist(cv.error.10,xlab='Test Error',ylab='Freq',main='Test Error LOOCV',
+     col='cyan',border='blue',density=30)
+
+```
+
+We Computed the K-Fold cross-validation with k=10. We obtained the error rates for the model for polynomials from i=1 to i=5 as 0.2533, 0.2538, 0.2532, 0.2537 and 0.2543 respectively.
+
+### The Bootstrap
+
+The bootstrap approach focuses on repeatedly sampling observations from the data set with replacement.
+We use the boot method within the trainControl function in R.
+
+```{r warning=FALSE}
+# load the library
+library(caret)
+library(e1071)
+# load the iris dataset
+# define training control
+train_control <- trainControl(method="boot", number=100)
+# train the model
+model <- train(stabf~., data=data, trControl=train_control, method="glm")
+# summarize results
+print(model)
+```
+
+From the above, using the bootstrap method and then fitting with a lositic model yielded a training error rate of 0.184. 
+
+```{r warning=FALSE}
+set.seed(1)
+
+boot.fn=function(data,index){
+  model=glm(stabf~., family = binomial, data = data,subset = index)
+  return(coef(model))
+}
+
+boot.fn(data,sample(392,392,replace = T))
+boot(data,boot.fn,1000)
+
+```
+
+#Model Selection and Regularization
+
+##Subset Selection
+
+###Best Subset Selection
+
+We apply the best subset selection approach on our data set. Although there are other packages to do this but We use the bestglm package in R package to carryout subset selection. We use logistic regression for illustartion. This package is dependent on the leaps package that is used for linear regression but can also be used for logistic regression.
+
+```{r warning=FALSE}
+library(leaps)
+regfit.full = regsubsets(stabf~.,data)
+summary(regfit.full)
+```
+
+Asterish indicates that a given variable is included in the corresponding model. From above, the output indicated that the best one-variable model contains taus2. Best two-variable model contains only tau2 and tau4, best three-variable model contains tau1,tau2 and tau4 etc.
+
+We run the above procedure again but set nvmax to 11 variables this time. Parameter nvmax is used to set the maximum number of variables you desire the function to use.
+
+```{r warning=FALSE}
+library(leaps)
+regfit.full = regsubsets(stabf~.,data,nvmax = 11)
+summary(regfit.full)
+```
+
+Variable p2 is the last variable to be added at subset 11. This agrees with our earlier discovery showing p2 with high p-value, showing it is less significance. 
+
+```{r warning=FALSE}
+names(summary(regfit.full))
+reg.summary=summary(regfit.full)
+```
+
+The summary() function  returns R2, RSS, adjusted R2, Cp, and BIC. We can examine these to try to select the best overall model.
+
+Above shows the R-square values of all the 11 variables.
+
+Below we are plot the BIC for all of the models to set the overall best model and indicates model with smallest statistics.
+
+```{r warning=FALSE}
+par(mfrow=c(2,2))
+which.min(reg.summary$bic)
+plot(reg.summary$bic, xlab = "Number of Variables", ylab = "BIC", type = "l")
+points(8, reg.summary$bic[8], col = "red", cex = 2, pch = 20)
+```
+
+```{r warning=FALSE}
+plot(regfit.full,scale ="bic")
+```
+
+From above, we can see that the model with the smallest BIC close to -5100 is the eight-variable model. Coef can be used to see which coefficient estimates associated with this model. 
+
+```{r warning=FALSE}
+coef(regfit.full,8)
+```
+
+The best over model will contain only tau1, tau2, tau3, tau4, g1, g2g3 and g4 variables.
+
+We will test this by fitting a logistic regression model with only these eight variables and checking the performance of this model.
+
+```{r}
+glm.fits3=glm(stabf~tau1+tau2+tau3+tau4+g1+g2+g3+g4, family = binomial, data = train)
+glm.probs3=predict(glm.fits3,test,type = "response")
+glm.pred3=rep("stable",2500)
+glm.pred3[glm.probs3>.5]="unstable"
+table(glm.pred3,test$stabf)
+mean(glm.pred3==test$stabf)
+```
+
+The performance of our model using eight variables only is better than using all the model. We observe a 82% accuracy.
+
+###Stepwise Selection
+
+####Forward Stepwise Selection
+
+The regsubsets() function will also be used for forward stepwise selection, by adding the parameter method="forward".
+
+```{r warning=FALSE}
+regfit.full = regsubsets(stabf~.,data,nvmax = 11, method = "forward")
+summary(regfit.full)
+```
+
+Following the above forward stepwise selection, the best one variable model contains only tau2, and the best two-variable contains taus and tau4 and so on. Due to the nature of our data, the result of forward stepwise is similar to what we got with best stepwise.
+
+####Backward Stepwise Selection
+
+The regsubsets() function can also be used for backward stepwise selection, by adding the parameter method="backward".
+
+```{r warning=FALSE}
+regfit.full = regsubsets(stabf~.,data,nvmax = 11, method = "backward")
+summary(regfit.full)
+```
+
+The result we ordained is similar to forward stepwise and backward stepwise. 
+
+##Shrinkage Methods
+
+For shrinkage methods we carry out two approaches. Namely, regression model and lasso models. We use glmnet R package to perform both ridge regression model and lasso models.
+
+###Ridge regression
+
+We use the glmnet() function in R with parameter alpha=0 to fit a ridge regression model. We make use of other R functions to prepare the data for ridge regression. We also convert the outcome class to numerical variable.
+
+```{r warning=FALSE}
+library(caret)
+library(glmnet)
+library(magrittr) # only needed the first time you use it
+library(dplyr)    # alternative installation of the %>%
+set.seed(123)
+training.samples <- data$stabf %>% 
+  createDataPartition(p = 0.8, list = FALSE)
+train.data  <- data[training.samples, ]
+test.data <- data[-training.samples, ]
+
+
+# Find the best lambda using cross-validation
+set.seed(123) 
+# Dumy code categorical predictor variables
+x = model.matrix(stabf~., train.data)[,-1]
+# Convert the outcome (class) to a numerical variable
+y = ifelse(train.data$stabf == "stable", 1, 0)
+cv.ridge <- cv.glmnet(x, y, alpha = 0, family = "binomial")
+``` 
+
+Next, we fit a model using our ridge regression value and then observe the performance accuracy.
+
+```{r}
+# Fit the final model on the training data
+model <- glmnet(x, y, alpha = 1, family = "binomial",
+                lambda = cv.ridge$lambda.min)
+# Display regression coefficients
+coef(model)
+# Make predictions on the test data
+x.test <- model.matrix(stabf ~., test.data)[,-1]
+probabilities <- model %>% predict(newx = x.test)
+predicted.classes <- ifelse(probabilities > 0.5, "stable", "unstable")
+# Model accuracy
+observed.classes <- test.data$stabf
+mean(predicted.classes == observed.classes)
+```
+
+From the above procedure using lasson method, we observed an accurancy of 81.5%.
+We make a plot of the cv.ridge variable.
+
+```{r warning=FALSE}
+plot(cv.ridge)
+```
+
+###The Lasso
+
+Lasso works similar to ridge regression with the difference that lasso has penalty of the sum of the absolute values of the coefficients. The penalty for ridge regression is the sum of the squares of the cofficients. 
+We will use glmnet also for lasso but with alpha parameter set to 1.
+
+```{r warning=FALSE}
+# Split the data into training and test set
+#install.packages("magrittr") # only needed the first time you use it
+#install.packages("dplyr")    # alternative installation of the %>%
+library(magrittr) # need to run every time you start R and want to use %>%
+library(dplyr)    # alternative, this also loads %>%
+library(caret)
+set.seed(123)
+training.samples <- data$stabf %>% 
+  createDataPartition(p = 0.8, list = FALSE)
+train.data  <- data[training.samples, ]
+test.data <- data[-training.samples, ]
+
+
+# Find the best lambda using cross-validation
+set.seed(123) 
+# Dumy code categorical predictor variables
+x <- model.matrix(stabf~., train.data)[,-1]
+# Convert the outcome to a numerical variable
+y <- ifelse(train.data$stabf == "stable", 1, 0)
+
+
+cv.lasso <- cv.glmnet(x, y, alpha = 1, family = "binomial")
+# Fit the final model on the training data
+model <- glmnet(x, y, alpha = 1, family = "binomial",
+                lambda = cv.lasso$lambda.min)
+# Display regression coefficients
+coef(model)
+# Make predictions on the test data
+x.test <- model.matrix(stabf ~., test.data)[,-1]
+probabilities <- model %>% predict(newx = x.test)
+predicted.classes <- ifelse(probabilities > 0.5, "stable", "unstable")
+# Model accuracy
+observed.classes <- test.data$stabf
+mean(predicted.classes == observed.classes)
+``` 
+
+From above, using lasso gave an accuracy of 81.95% which is better than ridge regression with accuracy of 81.5%. 
+
+```{r warning=FALSE}
+set.seed(123)
+cv.lasso <- cv.glmnet(x, y, alpha = 1, family = "binomial")
+plot(cv.lasso)
+```
+
+The above plot displays the cross-validation error according to the log of lambda. The vertical dash line indictaes that the log of the optimal value of lambda is approximately -5, which minimizes the pprediction error. This lamdba value will gove the most accuract model. 
+
+
+##Dimension Reduction Methods
+
+There are two dimension reduction methods we carry out in this session. These are methods are principal components regression and partial least squares method.
+
+###Principal Components Regression
+
+Principal components regression (PCT) can be performed using the prcomp() function in R.
+
+```{r warning=FALSE}
+#library (pls)
+#set.seed (2)
+#pcr.fit=pcr(tau1~., data=data ,scale=TRUE,validation ="CV")
+#summary(pcr.fit)
+#validationplot(pcr.fit ,val.type="MSEP")
+data.pr <- prcomp(data[c(1:11)], center = TRUE, scale = TRUE)
+summary(data.pr)
+```
+
+The prcomp() function runs PCA on our data's predictor variables. We excluded the response variable. We tell the R function to center and scale our data and then standardize the data. We then displayed the summary.
+
+The summary call displays the standard deviation (eigenvalues), proportion of variance and the cumulative proportion. 
+
+Below we make a plot of the eigenvalues pf the first 12 PCs and cumulative variance.
+
+```{r warning=FALSE}
+screeplot(data.pr, type = "l", npcs = 12, main = "Screeplot of the first 12 PCs")
+abline(h = 1, col="red", lty=5)
+legend("topright", legend=c("Eigenvalue = 1"),
+       col=c("red"), lty=5, cex=0.6)
+cumpro <- cumsum(data.pr$sdev^2 / sum(data.pr$sdev^2))
+plot(cumpro[0:12], xlab = "PC #", ylab = "Amount of explained variance", main = "Cumulative variance plot")
+abline(v = 6, col="blue", lty=5)
+abline(h = 0.88759, col="blue", lty=5)
+legend("topleft", legend=c("Cut-off @ PC6"),
+       col=c("blue"), lty=5, cex=0.6)
+```
+
+From the procedure above, the first 6 components has an Eigenvalue > 1 and explains almost 90% of variance. We can reduced the dimensionality from 11 to 6 while losing only 10% variance.
+
+Below we will plot the first two components.
+
+```{r warning=FALSE}
+plot(data.pr$x[,1],data.pr$x[,2], xlab="PC1 (44.3%)", ylab = "PC2 (19%)", main = "PC1 / PC2 - plot")
+```
+
+Let us include the response variable in the plot and see how it looks. 
+
+```{r warning=FALSE}
+library("factoextra")
+fviz_pca_ind(data.pr, geom.ind = "point", pointshape = 21, 
+             pointsize = 2, 
+             fill.ind = data$stabf, 
+             col.ind = "black", 
+             palette = "jco", 
+             addEllipses = TRUE,
+             label = "var",
+             col.var = "black",
+             repel = TRUE,
+             legend.title = "Stabf") +
+  ggtitle("2D PCA-plot from 11 feature dataset") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+In above procedure, we made same plot as before but added some colors corresponding to the stability of the electric grid. This added beauty to the PCA. We used the first two components and we can see some separation between stable and unstable variable.
+
+
+##Partial Least Squares
+
+To carry out PLS we use of caret package. We will start by preprocessing by removing the zero variance predictors, center and scale all the remaining predictors using the preProc argument. We train the PLS model and then check the cross-validation profile.
+
+```{r}
+set.seed (1)
+#pls.fit=plsr(Salary, data=Hitters ,subset =train ,scale=TRUE,validation ="CV")
+#ummary (pls.fit )
+dataPLS = data
+dataPLS$class = factor(dataPLS$stabf)
+# Compile cross-validation settings
+set.seed(100)
+myfolds <- createMultiFolds(dataPLS$class, k = 5, times = 10)
+control <- trainControl("repeatedcv", index = myfolds, selectionFunction = "oneSE")
+ 
+# Train PLS model
+mod1 <- train(class ~ ., data = dataPLS,
+ method = "pls",
+ metric = "Accuracy",
+ tuneLength = 20,
+ trControl = control,
+ preProc = c("zv","center","scale"))
+ 
+# Check CV profile
+plot(mod1)
+```
+
+The above plot shows the CV profile, where we learn the accurancy obtained from the trained model with different latent variables(Lv). The PLS uses a discriminate analysis model for training.
+
+We use the varImp() function with parameter 10 to display the 10 most important variable from the PLS.
+
+```{r warning=FALSE}
+# Compile models and compare performance
+plot(varImp(mod1), 10, main = "PLS-DA")
+```
+
+The above procedure displayed the 10 most important variables given in relative levels (scaled to the range 0 - 100). The response variable has a relative level of 100. 
+
+We move to the next session where we discuss moving beyong linearity.
+
+#Moving Beyond Linearity
+
+In this session, we focus on generalized addictive models only. There are other models that can also be used here but we will limit our scop to GAM.
+
+##Generalized Additive Models
+
+Generalized additive models (GAMs) presents framwork to extending a standard linear model by allowing non-linear functions of each variables while maintaining additivity.
+
+We use the gam() function in the gam package in R. We are going to fit a logistic regression Model using GAMs for probabilities of the Binary response values. One important feature of gam is its ability to allow non-linearity on multiple variables at the sametime. GAM can be used with other non-linear functions.
+
+We run gam function on our data set. The We fit the model using smoothing splines.
+
+```{r warning=FALSE}
+library(gam)
+#logistic Regression Model
+logitgam1<-gam(I(stabf) ~ s(tau1,df=4) + s(tau2,df=4) + s(tau3,df=4) + s(tau4,df=4) + s(p2,df=4) +s(p3,df=4)+s(p4,df=4) + + s(g1,df=4) + s(g1,df=4) + s(g2,df=4) + s(g3,df=4) + s(g4,df=4) ,data=data,family=binomial)
+plot(logitgam1,se=T)
+```
+
+From the plots above, can see that fitting non-linearity on most of the variables is sufficient, but Non-linearity isn't sufficint for variables p2,p3 and p4.
+
+#Tree-Based methods
+
+Tree-based methods involve segmenting the predictor space into a number of simple regions. Bsed on the nature of our data set, we will be using tree-based methods for classifiction.
+
+##Fitting Classification Trees
+
+The tree library is used to construct classification trees in R. We will use these methods on our electricity data set.
+
+```{r warning=FALSE}
+library(tree)
+tree.data=tree(stabf~.,data)
+summary(tree.data)
+```
+
+The summary() function shows that only six of the eleven variables are used in the tree construction. The variables are "tau1" "g3"   "tau2" "g2"   "tau3" "tau4" "g1". The number of nodes is 14, residual mean deviance is 0.94 and the misclassification error rate is 22.5%.
+
+One interesting feature of tree methods is the fact that we can display the tree graphically. We will go ahead to display the tree graphically below.
+
+```{r warning=FALSE}
+plot(tree.data)
+text(tree.data,pretty = 0)
+```
+
+We used plot() function to display the tree structure, and the text() function to disply the node labels. The argument pretty=0 is to include the category names of the qualitative predictors rather than displaying a letter for each category. Terminal nodes are stable and unstable.
+
+We print the output corresponding to each branch of the tree below.
+
+```{r warning=FALSE}
+tree.data
+```
+
+The above code shows the number of observations in the branch, the deviance, the overall prediction for the branch (stable or unstable), and the fraction of observations in that branch that takes one values of yes and no. The brances that lead to terminal nodes are indicated using asterisks.
+
+To evaluate the performance of the classification tree on the data, we train the tree on the train data and estimate the test error using the test data.
+
+```{r warning=FALSE}
+set.seed(2)
+train=sample(1:nrow(data),7500)
+data.test = data[-train,]
+stabf.test = data$stabf[-train]
+tree.data=tree(stabf~.,data,subset = train)
+tree.pred=predict(tree.data,data.test,type = "class")
+table(tree.pred,stabf.test)
+(663+1297)/2500
+```
+
+We split the observations into trainging set and test set. Build the tree using the training set, and evaluate the performance on the test data. The predict() fucntion is used for this purpose. This procedure gave 78.4% correct predictions of the locations of the test data set.
+
+Next, we carry out pruning of the tree to see if there can be improvement on the tree. We use FUN=prune.misclass in order to indicate that we want the classification error rate to guide the cross-validation and pruning process, rather than the default for the cv.tree() function, which is deviance.
+
+```{r warning=FALSE}
+set.seed(3)
+cv.data=cv.tree(tree.data,FUN=prune.misclass)
+names(cv.data)
+cv.data
+```
+
+The above procedure outputs the number of terminal nodes of each tree considered(size), value of cost-complexity parameter used(k), corss-validation error(dev) and method which is misclass. Tree with 16 terminal nodes and tree with terminal nodes 14 results in the lowest cross-validation error rate, with 1738 cross-validation errors.
+
+```{r warning=FALSE}
+par(mfrow=c(1,2))
+plot(cv.data$size,cv.data$dev, type = "b")
+plot(cv.data$k,cv.data$dev, type = "b")
+```
+
+Above is the plot of the error rate as function of both size and k.
+
+To prune the tree, We use the prune.misclass() function to obtain the 16-node tree.
+
+
+```{r warning=FALSE}
+prune.data=prune.misclass(tree.data,best = 16)
+plot(prune.data)
+text(prune.data,pretty=0)
+```
+
+To find out how well the pruned tree perform on the test data set, we apply the predict() function.
+
+```{r warning=FALSE}
+tree.pred2=predict(prune.data,data.test,type = "class")
+table(tree.pred2,stabf.test)
+(663+1297)/2500
+```
+
+Using the pruned tree to carry out prediction on test data gave 78.4% accuracy. The pruning process is expected to produce both an interpretable tree and also improved the classification accuracy in some cases.
+
+##Bagging and Random Forests
+
+We apply bagging and random forests to our data set, using the randomForest oackage in R. 
+Bagging is a speacil case of a random forest with m=p. RandomForest() function in R can be used for both random forests and bagging.
+
+```{r warning=FALSE}
+library("randomForest")
+set.seed(1)
+bag.data=randomForest(stabf~.,data,subset=train,mtry=11,importance=TRUE)
+bag.data
+```
+
+The argument mtry=11 to indicates that all 11 predictors should be considered for each split of the tee. Below, We check how well the bagged model perform on the test set.
+
+```{r warning=FALSE}
+table(predict(bag.data,data.test,type = "class"), stabf.test)
+(1 - ((809+1480)/2500)) * 100
+(809+1480)/2500
+```
+
+The misclassification rate is 8.44%, in others words the accuracy is 91.6%. This performed better than using an optimally-pruned single tree.
+
+To grow randomForest works in similar way as bagging, except that a smaller value is used for the mtry argument. By default, random() uses SqrtRoot of P when building a random forest of classification trees. We use mtry = 3.
+
+```{r warning=FALSE}
+set.seed(1)
+rf.data=bag.data=randomForest(stabf~.,data,subset=train,mtry=3,importance=TRUE)
+tree.pred=predict(rf.data,data.test,type = "class")
+table(tree.pred,stabf.test)
+(805+1509)/2500
+```
+
+The accuracy is 92.56%; this shows that random forests yield an improvement over bagging in this case.
+
+Below, we use the importance() function, to see the importance of each variable.
+
+```{r warning=FALSE}
+importance(rf.data)
+```
+
+From the above procedure, two measure of variable of importance are mean deacreased accuracy and mean decreased gini.Plots of these measures will be produced below.
+
+```{r warning=FALSE}
+varImpPlot(rf.data)
+```
+
+##Boosting
+
+The gbm() function within glm package in R will be used to fit boosted classification trees to our data set.
+
+```{r warning=FALSE}
+library(gbm)
+set.seed(1)
+data = read.csv("electricity19.csv")
+data$stabf = as.numeric(data$stabf)
+data = transform(data,stabf=stabf-1)
+train=sample(1:nrow(data),7500)
+data.test = data[-train,]
+stabf.test = data$stabf[-train]
+
+boost.data=gbm(stabf~.,data[train,],distribution = "bernoulli",n.trees = 5000, interaction.depth = 4)
+```
+
+The above procedure was used to fit boosted classification tree to the electrucity data set. We ran gmb() with option distribution="bernoulli" for a binary classification problem. The argument n.trees=500 indictates we wanted 5000 trees and the option interaction.depth=4 limits the depth of each tree.
+
+```{r warning=FALSE}
+summary(boost.data)
+```
+From above procedure, tau2 and tau4 are the most important variables. tau1, tau3,g3,g4 and g1 are also imporatnt variables.
+
+```{r warning=FALSE}
+par(mfrow=c(1,2))
+plot(boost.data,i='tau2')
+plot(boost.data,i='tau4')
+```
+In the above procedure, we produced partial dependence plots for the two most important variables. These ilustrate the marginal effect of the selected variables on the response after integrating out the other variable.
+
+Next, We use the boosted model to predict stabf on the test set.
+
+```{r warning=FALSE}
+yhat.boost=predict(boost.data,data.test,type = "response",n.trees = 5000)
+mean(yhat.boost==stabf.test)
+```
+
+Prediction with boost model on our data gave 0.0004 test error rate, making the accuracy to be 0.9996. This is almost perfect and performs better than random forest and bagging.
+
+In the above procedure we used the default lambda which is 0.1. I will run the procedure again to make use of lambda as 0.2.
+
+```{r warning=FALSE}
+boost.data=gbm(stabf~.,data[train,],distribution = "bernoulli",n.trees = 5000, interaction.depth = 4, shrinkage = 0.2, verbose = F)
+yhat.boost=predict(boost.data,data.test,type = "response",n.trees = 5000)
+mean(yhat.boost==stabf.test)
+```
+
+With lambda as 0.2, the output gave 0.125 test error rate, making the performance to be 
+
+#Support Vector Machine
+
+Support vector machine main objective is to find a hyperplane in an N-dimensional space that distinctly classifies the data points.
+There are many possible hyperplanes that could be chosen to separte the two classes. In this project, our objective is to find a plane that has the maximum margin.
+
+We use the svm() function in e1071 package in R. We use the training data to fit the model, and the testing data to test the model.
+
+```{r warning=FALSE}
+library(e1071)
+library(magrittr)
+set.seed(1)
+smp_siz = floor(0.75*nrow(data)) 
+train_ind = sample(seq_len(nrow(data)),size = smp_siz)  
+train =data[train_ind,] 
+test=data[-train_ind,]
+
+model_svm <- svm(stabf ~., data=train, cost = 1000, gamma = 0.01)
+model_svm
+```
+From the above procedure, the cost parameter is used to penalise the model for misclassification. We set the cost to be 100. We fitted the model using svm. 
+Below, we run predict() function pn our fitted model using the test data, and then look at its accurracy.
+
+```{r warning=FALSE}
+test_svm <- predict(model_svm, newdata = test %>% na.omit())
+yo <- test %>% na.omit()
+#table(test_svm, yo$stabf) run this code
+(876+1552)/2500
+```
+
+The result above gave a high accuracy of 97.12% using train data and test data. This accuracy shows that the cost penalty of 100 is suitable for our model.
+
+
+#Conclusion
+
+The scope of this project is to apply machine learning concepts taught in class on our data set. We made use of open dataset. We were able to apply several classification machine learning methods on the electricity data set to achieve the goal of the project.
+
+The goal of the project is to model the data, so as to accurately predict the stability of electric grid. Also, infer the relationship between predictors and the response. We achieved these goals by using sevearl classification methods discussed in lass.
+
+The following table consolidates the results of some of the methods used in this project.
+
+```{r warning=FALSE, echo=FALSE}
+
+tabl <- "  # Results of some methods used in the project
+| SI.No | Methods                           | Performance Accuracy  |
+|-------|:---------------------------------:|----------------------:|
+| 1     | Logistic regression               | 0.8176                |
+| 2     | Linear discriminate analysis      | 0.8176                |
+| 3     | Quadratic discriminate analysis   | 0.888                 |
+| 4     | K-Nearest Neighbors (k=5)         | 0.8632                |
+| 5     | Validation set approach           | 0.82                  | 
+| 7     | K-Fold cross-validation           | 0.7459                |
+| 8     | Boostrap                          | 0.816                 |
+| 9     | Classification trees              | 0.784                 |
+| 10    | Trees + Bagging                   | 0.916                 |
+| 11    | Trees + Random forest             | 0.926                 |
+| 12    | Trees + Boosting                  | 0.9996                |
+| 13    | SVM                               | 0.9712                |
+"
+cat(tabl) # output the table in a format good for HTML/PDF/docx conversion
+
+```
+
+Further work will be to apply more classification methods on our dataset and also to expand the scope of the methods we used.
+
+#Acknowledgment
+
+I would like to express my sincere gratitute to my University Professor Dr. Gunes Koru (https://drkoru.us/) for the continuous support and excellent teaching techniques. His guidance made this project possible.
+
+I would also like to thank my friend Nelson Ayaji for his assistance through the project. His advice made a difference. 
+
+#References
+1. https://rstudio-pubs-static.s3.amazonaws.com/90467_c70206f3dc864d53bf36072207ee011d.html
+2. https://www.r-bloggers.com/predicting-creditability-using-logistic-regression-in-r-cross-validating-the-classifier-part-2-2/
+3. "An introduction to Statistical Learning with Applications in R" by Greth James et al
+
+
+
+
